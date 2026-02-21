@@ -1,5 +1,3 @@
-"use client";
-
 import { Suspense } from "react";
 import ConfirmPageContent from "./ConfirmClient";
 import ConfirmClient from "./ConfirmClient";
