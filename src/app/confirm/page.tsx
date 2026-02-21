@@ -1,5 +1,6 @@
+export const dynamic = "force-dynamic";
+
 import { Suspense } from "react";
-import ConfirmPageContent from "./ConfirmClient";
 import ConfirmClient from "./ConfirmClient";
 
 export default function ConfirmPage() {
@@ -9,3 +10,4 @@ export default function ConfirmPage() {
     </Suspense>
   );
 }
+
