@@ -4,15 +4,13 @@ import { supabaseService } from "@/lib/supabaseServer";
 
 export async function POST(
   req: NextRequest,
-  context: { params: { id: string } } // must be a plain object
+  context: { params: { id: string } } // ✅ must be plain object
 ) {
-  const { id } = context.params; // correct extraction
+  const { id } = context.params;
   const body = await req.json().catch(() => null);
   const status = body?.status as "paid" | "cancelled" | undefined;
 
-  if (!status) {
-    return NextResponse.json({ error: "Invalid status" }, { status: 400 });
-  }
+  if (!status) return NextResponse.json({ error: "Invalid status" }, { status: 400 });
 
   const supabase = supabaseService();
 
@@ -24,7 +22,6 @@ export async function POST(
       .single();
 
     if (oErr || !order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
-
     if (order.status === "paid") return NextResponse.json({ ok: true, alreadyPaid: true });
 
     const { data: product, error: pErr } = await supabase
@@ -34,7 +31,6 @@ export async function POST(
       .single();
 
     if (pErr || !product) return NextResponse.json({ error: "Product not found" }, { status: 404 });
-
     if (Number(product.stock) < Number(order.qty))
       return NextResponse.json({ error: "Not enough stock" }, { status: 409 });
 
@@ -50,7 +46,6 @@ export async function POST(
     return NextResponse.json({ ok: true });
   }
 
-  // Cancel order
   const { error } = await supabase.from("orders").update({ status: "cancelled" }).eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
