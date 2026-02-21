@@ -1,9 +1,12 @@
+"use client";
+
 import { Suspense } from "react";
+import ConfirmPageContent from "./ConfirmClient";
 import ConfirmClient from "./ConfirmClient";
 
-export default function Page() {
+export default function ConfirmPage() {
   return (
-    <Suspense fallback={<div className="p-10 text-center">Loading...</div>}>
+    <Suspense fallback={<div>Loading...</div>}>
       <ConfirmClient />
     </Suspense>
   );
