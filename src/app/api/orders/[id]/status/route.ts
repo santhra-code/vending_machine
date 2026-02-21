@@ -1,20 +1,22 @@
+// src/app/api/orders/[id]/status/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseService } from "@/lib/supabaseServer";
 
 export async function POST(
   req: NextRequest,
-  context: { params: { id: string } } // ✅ must NOT be a Promise
+  context: { params: { id: string } } // ✅ must be plain object
 ) {
-  const { id } = context.params; // use context.params
+  const { id } = context.params; // ✅ extract id from params
   const body = await req.json().catch(() => null);
   const status = body?.status as "paid" | "cancelled" | undefined;
 
-  if (!status || (status !== "paid" && status !== "cancelled")) {
+  if (!status) {
     return NextResponse.json({ error: "Invalid status" }, { status: 400 });
   }
 
   const supabase = supabaseService();
 
+  // Handle paid
   if (status === "paid") {
     const { data: order, error: oErr } = await supabase
       .from("orders")
@@ -22,16 +24,9 @@ export async function POST(
       .eq("id", id)
       .single();
 
-    if (oErr || !order) {
-      return NextResponse.json(
-        { error: oErr?.message ?? "Order not found" },
-        { status: 404 }
-      );
-    }
+    if (oErr || !order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
 
-    if (order.status === "paid") {
-      return NextResponse.json({ ok: true, alreadyPaid: true });
-    }
+    if (order.status === "paid") return NextResponse.json({ ok: true, alreadyPaid: true });
 
     const { data: product, error: pErr } = await supabase
       .from("products")
@@ -39,47 +34,25 @@ export async function POST(
       .eq("id", order.product_id)
       .single();
 
-    if (pErr || !product) {
-      return NextResponse.json(
-        { error: pErr?.message ?? "Product not found" },
-        { status: 404 }
-      );
-    }
+    if (pErr || !product) return NextResponse.json({ error: "Product not found" }, { status: 404 });
 
-    if (Number(product.stock) < Number(order.qty)) {
-      return NextResponse.json(
-        { error: "Not enough stock to complete payment" },
-        { status: 409 }
-      );
-    }
+    if (Number(product.stock) < Number(order.qty))
+      return NextResponse.json({ error: "Not enough stock" }, { status: 409 });
 
-    const { error: updOrderErr } = await supabase
-      .from("orders")
-      .update({ status: "paid" })
-      .eq("id", id);
-
-    if (updOrderErr) {
-      return NextResponse.json({ error: updOrderErr.message }, { status: 500 });
-    }
+    const { error: updOrderErr } = await supabase.from("orders").update({ status: "paid" }).eq("id", id);
+    if (updOrderErr) return NextResponse.json({ error: updOrderErr.message }, { status: 500 });
 
     const { error: updProdErr } = await supabase
       .from("products")
       .update({ stock: Number(product.stock) - Number(order.qty) })
       .eq("id", product.id);
-
-    if (updProdErr) {
-      return NextResponse.json({ error: updProdErr.message }, { status: 500 });
-    }
+    if (updProdErr) return NextResponse.json({ error: updProdErr.message }, { status: 500 });
 
     return NextResponse.json({ ok: true });
   }
 
-  // Cancel order
-  const { error } = await supabase
-    .from("orders")
-    .update({ status: "cancelled" })
-    .eq("id", id);
-
+  // Handle cancelled
+  const { error } = await supabase.from("orders").update({ status: "cancelled" }).eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({ ok: true });
