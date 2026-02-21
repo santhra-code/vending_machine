@@ -3,9 +3,9 @@ import { supabaseService } from "@/lib/supabaseServer";
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } } // ✅ params is NOT a Promise
 ) {
-  const { id } = await params;
+  const { id } = params;
   const body = await req.json().catch(() => null);
   const status = body?.status as "paid" | "cancelled" | undefined;
 
@@ -74,11 +74,13 @@ export async function POST(
     return NextResponse.json({ ok: true });
   }
 
+  // Cancel order
   const { error } = await supabase
     .from("orders")
     .update({ status: "cancelled" })
     .eq("id", id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
   return NextResponse.json({ ok: true });
 }
