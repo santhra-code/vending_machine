@@ -4,9 +4,9 @@ import { supabaseService } from "@/lib/supabaseServer";
 
 export async function POST(
   req: NextRequest,
-  context: { params: { id: string } } // ✅ must be plain object
+  context: { params: { id: string } } // must be a plain object
 ) {
-  const { id } = context.params; // ✅ extract id from params
+  const { id } = context.params; // correct extraction
   const body = await req.json().catch(() => null);
   const status = body?.status as "paid" | "cancelled" | undefined;
 
@@ -16,7 +16,6 @@ export async function POST(
 
   const supabase = supabaseService();
 
-  // Handle paid
   if (status === "paid") {
     const { data: order, error: oErr } = await supabase
       .from("orders")
@@ -51,7 +50,7 @@ export async function POST(
     return NextResponse.json({ ok: true });
   }
 
-  // Handle cancelled
+  // Cancel order
   const { error } = await supabase.from("orders").update({ status: "cancelled" }).eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
