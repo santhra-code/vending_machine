@@ -3,9 +3,9 @@ import { supabaseService } from "@/lib/supabaseServer";
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } } // ✅ params is NOT a Promise
+  context: { params: { id: string } } // ✅ must NOT be a Promise
 ) {
-  const { id } = params;
+  const { id } = context.params; // use context.params
   const body = await req.json().catch(() => null);
   const status = body?.status as "paid" | "cancelled" | undefined;
 
