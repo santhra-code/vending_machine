@@ -20,14 +20,35 @@ export default function ConfirmClient() {
     if (!productId) return;
 
     (async () => {
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .eq("id", productId)
-        .single();
+      let p: Product | null = null;
+      try {
+        const { data, error } = await supabase
+          .from("products")
+          .select("*")
+          .eq("id", productId)
+          .single();
 
-      if (error) setErr(error.message);
-      else setProduct(data as Product);
+        if (!error && data) {
+          p = data as Product;
+        }
+      } catch {
+        // Supabase error fallback
+      }
+
+      if (!p) {
+        const res = await fetch(`/api/products/${productId}`).catch(() => null);
+        const json = await res?.json().catch(() => null);
+        if (json?.data) {
+          p = json.data as Product;
+        }
+      }
+
+      if (p) {
+        setProduct(p);
+        setErr(null);
+      } else {
+        setErr("Could not find product details.");
+      }
     })();
   }, [productId, supabase]);
 
@@ -45,25 +66,54 @@ export default function ConfirmClient() {
     setBusy(true);
     setErr(null);
 
-    const { data, error } = await supabase
-      .from("orders")
-      .insert({
-        product_id: product.id,
-        qty,
-        amount: total,
-        status: "pending",
-      })
-      .select("id")
-      .single();
+    let createdOrderId: string | null = null;
+
+    try {
+      const { data, error } = await supabase
+        .from("orders")
+        .insert({
+          product_id: product.id,
+          qty,
+          amount: total,
+          status: "pending",
+        })
+        .select("id")
+        .single();
+
+      if (!error && data?.id) {
+        createdOrderId = data.id;
+      }
+    } catch {
+      // Supabase error fallback
+    }
+
+    if (!createdOrderId) {
+      // Fallback via /api/orders
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          product_id: product.id,
+          qty,
+          amount: total,
+        }),
+      }).catch(() => null);
+
+      const json = await res?.json().catch(() => null);
+      if (json?.id) {
+        createdOrderId = json.id;
+      } else if (json?.error) {
+        setErr(json.error);
+      }
+    }
 
     setBusy(false);
 
-    if (error) {
-      setErr(error.message);
-      return;
+    if (createdOrderId) {
+      router.push(`/payment-page?orderId=${encodeURIComponent(createdOrderId)}`);
+    } else if (!err) {
+      setErr("Failed to initialize order. Please try again.");
     }
-
-    router.push(`/payment-page?orderId=${encodeURIComponent(data.id)}`);
   };
 
   return (

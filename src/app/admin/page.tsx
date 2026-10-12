@@ -8,6 +8,8 @@ type Stats = {
   totalVisitors: number;
   totalProductsSold: number;
   totalRevenue: number;
+  totalSubscribers?: number;
+  totalDispensedPads?: number;
 };
 
 export default function AdminDashboardPage() {
@@ -21,6 +23,8 @@ export default function AdminDashboardPage() {
     totalVisitors: 0,
     totalProductsSold: 0,
     totalRevenue: 0,
+    totalSubscribers: 0,
+    totalDispensedPads: 0,
   });
 
   const money = useMemo(
@@ -51,6 +55,8 @@ export default function AdminDashboardPage() {
       totalVisitors: Number(json?.data?.totalVisitors ?? 0),
       totalProductsSold: Number(json?.data?.totalProductsSold ?? 0),
       totalRevenue: Number(json?.data?.totalRevenue ?? 0),
+      totalSubscribers: Number(json?.data?.totalSubscribers ?? 0),
+      totalDispensedPads: Number(json?.data?.totalDispensedPads ?? 0),
     });
 
     setLoading(false);
@@ -83,7 +89,7 @@ export default function AdminDashboardPage() {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <div className="inline-flex items-center gap-2 rounded-full bg-slate-900/85 px-4 py-2 text-xs font-bold text-white shadow">
-                ADMIN PANEL
+                ADMIN PANEL • DIGITAL VENDING
               </div>
               <h1 className="mt-4 text-3xl md:text-4xl font-extrabold tracking-tight">
                 <span className="bg-gradient-to-r from-indigo-700 via-fuchsia-700 to-rose-700 bg-clip-text text-transparent">
@@ -91,21 +97,27 @@ export default function AdminDashboardPage() {
                 </span>
               </h1>
               <p className="mt-2 text-slate-700">
-                Sales, visitors and revenue summary
+                Sales, Annual Pass subscribers, coins, and motorized dispensing metrics
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <a
                 href="/"
-                className="rounded-2xl border border-white/70 bg-white/60 px-4 py-2 font-semibold text-slate-900 shadow-sm hover:bg-white/80 transition"
+                className="rounded-2xl border border-white/70 bg-white/60 px-4 py-2 font-semibold text-slate-900 shadow-sm hover:bg-white/80 transition text-sm"
               >
                 View Store
+              </a>
+              <a
+                href="/kiosk"
+                className="rounded-2xl bg-indigo-700 px-4 py-2 font-semibold text-white shadow hover:bg-indigo-800 transition text-sm"
+              >
+                Open Kiosk Mode
               </a>
               <button
                 disabled={busy === "logout"}
                 onClick={logout}
-                className="rounded-2xl bg-slate-900 px-4 py-2 font-semibold text-white shadow hover:bg-slate-800 disabled:opacity-50 transition"
+                className="rounded-2xl bg-slate-900 px-4 py-2 font-semibold text-white shadow hover:bg-slate-800 disabled:opacity-50 transition text-sm"
               >
                 {busy === "logout" ? "Logging out..." : "Logout"}
               </button>
@@ -120,55 +132,78 @@ export default function AdminDashboardPage() {
           )}
 
           {/* Stat cards */}
-          <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             <StatCard
               loading={loading}
               title="Total Users Purchased"
               value={stats.totalUsersPurchased}
-              hint="Paid orders count"
+              hint="Paid & QR pass transactions"
               accent="from-emerald-600 to-teal-600"
+              bg="bg-white/75"
+            />
+            <StatCard
+              loading={loading}
+              title="Annual Pass Subscribers"
+              value={stats.totalSubscribers ?? 0}
+              hint="Active 1-Year Member QR Passes"
+              accent="from-fuchsia-600 to-pink-600"
+              bg="bg-white/75"
+            />
+            <StatCard
+              loading={loading}
+              title="Total Products Sold / Dispensed"
+              value={stats.totalProductsSold}
+              hint="Pads dispensed into tray"
+              accent="from-rose-600 to-amber-600"
+              bg="bg-white/75"
+            />
+            <StatCard
+              loading={loading}
+              title="Total Revenue (Cash/UPI)"
+              value={money.format(stats.totalRevenue)}
+              hint="Sum of online & coin payments"
+              accent="from-amber-600 to-orange-600"
               bg="bg-white/75"
             />
             <StatCard
               loading={loading}
               title="Total Visitors"
               value={stats.totalVisitors}
-              hint="Needs visitor tracking"
+              hint="Unique daily kiosk interactions"
               accent="from-indigo-600 to-fuchsia-600"
               bg="bg-white/75"
             />
             <StatCard
               loading={loading}
-              title="Total Products Sold"
-              value={stats.totalProductsSold}
-              hint="Sum of qty (paid)"
-              accent="from-fuchsia-600 to-rose-600"
-              bg="bg-white/75"
-            />
-            <StatCard
-              loading={loading}
-              title="Total Revenue"
-              value={money.format(stats.totalRevenue)}
-              hint="Sum of amount (paid)"
-              accent="from-amber-600 to-orange-600"
+              title="Hardware Dispensing Cycles"
+              value={stats.totalDispensedPads ?? 0}
+              hint="Motor actuations logged"
+              accent="from-cyan-600 to-blue-600"
               bg="bg-white/75"
             />
           </div>
 
-          <div className="mt-8 flex flex-col sm:flex-row gap-3">
+          <div className="mt-8 flex flex-wrap gap-3">
             <button
               disabled={loading}
               onClick={fetchStats}
-              className="rounded-2xl border border-white/70 bg-white/60 px-5 py-3 font-semibold text-slate-900 shadow-sm hover:bg-white/80 disabled:opacity-50 transition"
+              className="rounded-2xl border border-white/70 bg-white/60 px-5 py-3 font-semibold text-slate-900 shadow-sm hover:bg-white/80 disabled:opacity-50 transition text-sm"
             >
               {loading ? "Loading..." : "Refresh Stats"}
             </button>
 
             <a
               href="/admin/products"
-              className="rounded-2xl bg-gradient-to-r from-indigo-700 via-fuchsia-700 to-rose-700 px-5 py-3 font-semibold text-white shadow hover:opacity-95 transition text-center"
+              className="rounded-2xl bg-gradient-to-r from-indigo-700 via-fuchsia-700 to-rose-700 px-5 py-3 font-semibold text-white shadow hover:opacity-95 transition text-center text-sm"
             >
-              Manage Products
+              Manage Products & Stock
+            </a>
+
+            <a
+              href="/admin/subscriptions"
+              className="rounded-2xl bg-fuchsia-700 px-5 py-3 font-semibold text-white shadow hover:bg-fuchsia-800 transition text-center text-sm"
+            >
+              Manage 1-Year Subscriptions & Passes
             </a>
           </div>
 

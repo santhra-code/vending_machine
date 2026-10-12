@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseService } from "@/lib/supabaseServer";
+import { DataService } from "@/lib/dataService";
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const supabase = supabaseService();
   const body = await req.json().catch(() => null);
 
   const patch: Record<string, unknown> = {};
@@ -18,14 +17,8 @@ export async function PATCH(
   if (body?.stock !== undefined) patch.stock = Number(body.stock);
   if (body?.active !== undefined) patch.active = Boolean(body.active);
 
-  const { data, error } = await supabase
-    .from("products")
-    .update(patch)
-    .eq("id", id)
-    .select("*")
-    .single();
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  const data = await DataService.updateProduct(id, patch);
+  if (!data) return NextResponse.json({ error: "Product not found" }, { status: 404 });
   return NextResponse.json({ data });
 }
 
@@ -34,9 +27,6 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const supabase = supabaseService();
-
-  const { error } = await supabase.from("products").delete().eq("id", id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  await DataService.deleteProduct(id);
   return NextResponse.json({ ok: true });
 }

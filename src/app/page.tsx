@@ -37,21 +37,34 @@ export default function HomePage() {
         setLoading(true);
         setErrorMsg(null);
 
-        const { data, error } = await supabase
-          .from("products")
-          .select("*")
-          .eq("active", true)
-          .order("created_at", { ascending: false });
+        let prods: Product[] = [];
 
-        if (cancelled) return;
+        // Attempt direct Supabase query
+        try {
+          const { data, error } = await supabase
+            .from("products")
+            .select("*")
+            .eq("active", true)
+            .order("created_at", { ascending: false });
 
-        if (error) {
-          setErrorMsg(error.message);
-          setProducts([]);
-          return;
+          if (!error && data && data.length > 0) {
+            prods = data as Product[];
+          }
+        } catch {
+          // Direct Supabase query failed or network offline
         }
 
-        setProducts((data ?? []) as Product[]);
+        // Resilient fallback to API route
+        if (prods.length === 0) {
+          const res = await fetch("/api/products");
+          const json = await res.json().catch(() => ({}));
+          if (json?.data && json.data.length > 0) {
+            prods = json.data as Product[];
+          }
+        }
+
+        if (cancelled) return;
+        setProducts(prods);
       } catch (e: any) {
         if (!cancelled) setErrorMsg(e?.message ?? "Unknown error");
       } finally {
@@ -95,22 +108,34 @@ export default function HomePage() {
 
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-fuchsia-200 via-rose-100 to-indigo-200 px-4 py-10">
-      {/* Admin Login: top-right */}
-      <a
-        href="/admin/login"
-        className="fixed right-5 top-5 z-50 inline-flex items-center gap-2 rounded-full
-                   bg-slate-900/80 px-4 py-2 text-sm font-semibold text-white shadow-lg
-                   backdrop-blur hover:bg-slate-900 transition"
-      >
-        Admin Login
-      </a>
+      {/* Top Navigation Bar: Links to Subscription Pass, Kiosk Mode, Admin */}
+      <div className="fixed top-4 right-4 z-50 flex flex-wrap items-center justify-end gap-2">
+        <a
+          href="/subscription"
+          className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-fuchsia-600 to-rose-600 px-4 py-2 text-xs md:text-sm font-semibold text-white shadow-lg backdrop-blur hover:opacity-90 transition"
+        >
+          <span>💳</span> My Annual Pass (QR)
+        </a>
+        <a
+          href="/kiosk"
+          className="inline-flex items-center gap-1.5 rounded-full bg-indigo-700/90 px-4 py-2 text-xs md:text-sm font-semibold text-white shadow-lg backdrop-blur hover:bg-indigo-800 transition"
+        >
+          <span>🏧</span> Kiosk Mode
+        </a>
+        <a
+          href="/admin/login"
+          className="inline-flex items-center gap-1.5 rounded-full bg-slate-900/80 px-4 py-2 text-xs md:text-sm font-semibold text-white shadow-lg backdrop-blur hover:bg-slate-900 transition"
+        >
+          Admin Login
+        </a>
+      </div>
 
-      <div className="mx-auto max-w-6xl">
+      <div className="mx-auto max-w-6xl pt-10 sm:pt-0">
         {/* Header */}
         <div className="rounded-[2rem] bg-white/60 shadow-2xl backdrop-blur-xl border border-white/50 p-8 md:p-10">
           <div className="flex flex-col items-center text-center">
             <div className="inline-flex items-center gap-2 rounded-full bg-white/70 px-4 py-2 text-xs font-semibold text-slate-700 border border-white/70 shadow-sm">
-              DIGITAL VENDING MACHINE
+              DIGITAL VENDING MACHINE • SANITARY NAPKINS
             </div>
 
             <h1 className="mt-5 text-3xl md:text-5xl font-extrabold tracking-tight">
@@ -120,9 +145,25 @@ export default function HomePage() {
             </h1>
 
             <p className="mt-3 max-w-2xl text-slate-700">
-              Search products, pick quantity, and proceed to confirmation (payment
-              page placeholder).
+              Select product and quantity. Pay using Google Pay, Razorpay, physical coins, or redeem via your 1-Year Member QR Code.
             </p>
+
+            {/* Annual Subscription Pass Banner */}
+            <div className="mt-6 w-full max-w-2xl rounded-2xl bg-gradient-to-r from-fuchsia-500/10 via-rose-500/10 to-indigo-500/10 border border-fuchsia-200/80 p-4 text-left flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm backdrop-blur">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl">🎟️</span>
+                <div>
+                  <div className="text-sm font-bold text-slate-900">Have an Annual Hygiene Subscription?</div>
+                  <div className="text-xs text-slate-600">Scan your Personal Member QR at the machine to dispense pads free from your quota.</div>
+                </div>
+              </div>
+              <a
+                href="/subscription"
+                className="whitespace-nowrap rounded-xl bg-gradient-to-r from-fuchsia-700 to-rose-600 px-4 py-2 text-xs font-bold text-white shadow hover:opacity-90 transition"
+              >
+                View My Pass
+              </a>
+            </div>
           </div>
 
           {errorMsg && (
